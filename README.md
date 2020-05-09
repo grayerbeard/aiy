@@ -1,4 +1,7 @@
-# AIY Projects
+# My Version AIY
+This repository is the original plus my corrections and additions.
+
+# AIY Projects (All Below is all from Google's Original ReadME File)
 
 This repository contains an easy-to-use Python API for the [AIY Vision Kit][aiy-vision]
 and [AIY Voice Kit][aiy-voice]. The code for all AIY kits is in the `aiyprojects` branch,
