@@ -33,24 +33,34 @@ from aiy.assistant.library import Assistant
 from aiy.board import Board, Led
 from aiy.voice import tts
 
+import paho.mqtt.subscribe as subscribe
+from time import sleep as time_sleep
+from utility import fileexists
+from datetime import datetime
+from sys import exit as sys_exit
+from config import class_config
+
 def power_off_pi():
 	tts.say('Good bye!')
 	subprocess.call('sudo shutdown now', shell=True)
-
 
 def reboot_pi():
 	tts.say('See you in a bit!')
 	subprocess.call('sudo reboot', shell=True)
 
-
 def say_ip():
 	ip_address = subprocess.check_output("hostname -I | cut -d' ' -f1", shell=True)
 	tts.say('My IP address is %s' % ip_address.decode('utf-8'))
 
-def say_david_age():
-	tts.say("david is " + str(70) + "years old")
+def say_sauna(config):
+	#global subscribe
+	latest_msg = subscribe.simple(config.topic, msg_count = 1, hostname = config.broker_address, \
+		retained = True,port = 1883)
+	msg = latest_msg.payload.decode()
+	tts.say("sauna temp is " + msg)
 
 def process_event(assistant, led, event):
+	global config
 	logging.info(event)
 	if event.type == EventType.ON_START_FINISHED:
 		led.state = Led.BEACON_DARK  # Ready.
@@ -66,12 +76,12 @@ def process_event(assistant, led, event):
 		elif text == 'reboot':
 			assistant.stop_conversation()
 			reboot_pi()
-		elif text == 'how old david':
-			assistant.stop_conversation()
-			say_david_age()
 		elif text == 'ip address':
 			assistant.stop_conversation()
 			say_ip()
+		elif text == 'house stuff':
+			assistant.stop_conversation()
+			say_sauna(config)
 	elif event.type == EventType.ON_END_OF_UTTERANCE:
 		led.state = Led.PULSE_QUICK  # Thinking.
 	elif (event.type == EventType.ON_CONVERSATION_TURN_FINISHED
@@ -81,16 +91,22 @@ def process_event(assistant, led, event):
 	elif event.type == EventType.ON_ASSISTANT_ERROR and event.args and event.args['is_fatal']:
 		sys.exit(1)
 
-
 def main():
-	#persons_birth
+	global config
+	config = class_config()
+	if fileexists(config.config_filename):		
+		print( "will try to read Config File : " ,config.config_filename)
+		config.read_file() # overwrites from file
+	else : # no file so file needs to be writen
+		config.write_file()
+		print("New Config File Made with default values, you probably need to edit it")
+
 	logging.basicConfig(level=logging.INFO)
 
 	credentials = auth_helpers.get_assistant_credentials()
 	with Board() as board, Assistant(credentials) as assistant:
 		for event in assistant.start():
 			process_event(assistant, board.led, event)
-
 
 if __name__ == '__main__':
 	main()
